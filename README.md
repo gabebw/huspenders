@@ -12,8 +12,17 @@ It assumes you want to create an executable, not a library.
 
 If you're on OS X:
 
-  $ brew tap gabebw/formulae # one time
-  $ brew install huspenders
+Tap the Homebrew formulae repo, one time:
+
+    $ brew tap gabebw/formulae
+    
+And install:
+
+    $ brew install huspenders
+    
+You can also install the absolute latest version:
+
+    $ brew install --HEAD huspenders
 
 Otherwise, download the script.
 
