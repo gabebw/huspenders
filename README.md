@@ -24,7 +24,7 @@ You can also install the absolute latest version:
 
     $ brew install --HEAD huspenders
 
-Otherwise, download the script.
+If you're not on OS X, download the script.
 
 ## History
 
