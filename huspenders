@@ -7,7 +7,7 @@
 set -e
 
 usage() {
-  print "Usage: huspenders projectname"
+  print "Usage: huspenders [--hspec] projectname"
   exit 64
 }
 
@@ -31,6 +31,57 @@ cabal_init_executable(){
     --source-dir=src
 }
 
+add_hspec() {
+  # hspec requires a library, so generate one
+  packagename=$1
+  cabalfile=$2
+
+  mkdir test
+
+  echo "{-# OPTIONS_GHC -F -pgmF hspec-discover #-}" > test/Spec.hs
+
+  cat >> "$cabalfile" <<HSPEC
+library
+  build-depends:       base >=4.8 && <4.9
+  hs-source-dirs:      src
+  default-language:    Haskell2010
+  exposed-modules:     $packagename
+
+test-suite test
+  type:              exitcode-stdio-1.0
+  main-is:           Spec.hs
+  hs-source-dirs:    test
+  ghc-options:       -Wall
+  default-language:  Haskell2010
+  build-depends:     base,
+                     hspec,
+                     $packagename
+HSPEC
+
+  cat >> "test/${packagename}Spec.hs" <<SPEC
+module ${packagename}Spec (main, spec) where
+
+import Test.Hspec
+import $packagename
+
+main :: IO ()
+main = hspec spec
+
+spec :: Spec
+spec = do
+    describe "sample" $ do
+        it "works" $
+            True \`shouldBe\` True
+SPEC
+}
+
+if [[ "$1" == "--hspec" ]];  then
+  generate_hspec=true
+  shift
+else
+  generate_hspec=false
+fi
+
 projectname=$1
 cabalfile="${projectname}.cabal"
 print "Cool, creating a project named ${fg_bold[yellow]}${projectname}${reset_color}"
@@ -38,18 +89,29 @@ print "Cool, creating a project named ${fg_bold[yellow]}${projectname}${reset_co
 mkdir "$projectname"
 cd "$projectname"
 
-cabal sandbox init
-cabal_init_executable "$projectname"
+cabal sandbox init > /dev/null
+cabal_init_executable "$projectname" > /dev/null
 # Strip whitespace, because cabal doesn't
 sed -i '' 's/ +$//g' *cabal
 
-cat > "src/Main.hs" <<PROJECT
+if $generate_hspec; then
+  add_hspec "$projectname" "$cabalfile"
+fi
+
+cat > "src/Main.hs" <<MAIN
 module Main where
 
+  import $projectname
+
   main = putStrLn "It works!"
+MAIN
+
+cat > "src/$projectname.hs" <<PROJECT
+module $projectname where
+  -- Add code here
 PROJECT
 
-git init
+git init --quiet
 cat >> .gitignore <<GITIGNORE
 .cabal-sandbox/
 cabal.sandbox.config
@@ -57,8 +119,14 @@ dist/
 GITIGNORE
 
 # Make sure everything's installed and runs correctly
-cabal update
-cabal install
-cabal run
+cabal update > /dev/null
+
+if $generate_hspec; then
+  cabal install --enable-tests
+  cabal test > /dev/null
+else
+  cabal install
+fi
+cabal run > /dev/null
 
 print "${fg_bold[green]}cd $projectname, edit src/Main.hs, run it with \`cabal run\`${reset_color}"
