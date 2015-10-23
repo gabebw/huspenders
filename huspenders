@@ -17,7 +17,7 @@ fi
 
 autoload -Uz colors && colors
 
-cabal_init(){
+cabal_init_executable(){
   fullname=$(finger $(whoami) | awk '/Name:/ {print $4" "$5}')
 
   cabal init \
@@ -26,6 +26,7 @@ cabal_init(){
     --license MIT \
     --synopsis "This is a required synopsis" \
     --is-executable \
+    --main-is="Main.hs" \
     --author="$fullname" \
     --source-dir=src
 }
@@ -38,17 +39,26 @@ mkdir "$projectname"
 cd "$projectname"
 
 cabal sandbox init
-cabal_init "$projectname"
+cabal_init_executable "$projectname"
 # Strip whitespace, because cabal doesn't
 sed -i '' 's/ +$//g' *cabal
-echo 'main = putStrLn "It works!"' > src/Main.hs
 
-echo ".cabal-sandbox/" >> .gitignore
-echo "cabal.sandbox.config" >> .gitignore
-echo "dist/" >> .gitignore
+cat > "src/Main.hs" <<PROJECT
+module Main where
+
+  main = putStrLn "It works!"
+PROJECT
+
 git init
+cat >> .gitignore <<GITIGNORE
+.cabal-sandbox/
+cabal.sandbox.config
+dist/
+GITIGNORE
 
-# Do an initial compile
-cabal run >/dev/null
+# Make sure everything's installed and runs correctly
+cabal update
+cabal install
+cabal run
 
 print "${fg_bold[green]}cd $projectname, edit src/Main.hs, run it with \`cabal run\`${reset_color}"
