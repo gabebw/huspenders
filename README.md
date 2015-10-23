@@ -6,7 +6,21 @@ It's the Haskell version of [suspenders].
 
 Huspenders creates a Cabal-based project with some sane defaults.
 
-It assumes you want to create an executable, not a library.
+## Usage
+
+    huspenders PROJECTNAME
+
+Now you can do `cabal run` to run `src/Main.hs`.
+
+You can also generate [hspec] tests:
+
+[hspec]: http://hspec.github.io/
+
+    huspenders --hspec PROJECTNAME
+
+To run the tests:
+
+    cabal test
 
 ## Installation
 
@@ -15,11 +29,11 @@ If you're on OS X:
 Tap the Homebrew formulae repo, one time:
 
     $ brew tap gabebw/formulae
-    
+
 And install:
 
     $ brew install huspenders
-    
+
 You can also install the absolute latest version:
 
     $ brew install --HEAD huspenders
