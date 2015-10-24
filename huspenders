@@ -6,8 +6,10 @@
 
 set -e
 
+template_root="$(dirname "${0:A}")"/templates
+
 usage() {
-  print "Usage: huspenders [--hspec] projectname"
+  print "Usage: huspenders [--hspec] packagename"
   exit 64
 }
 
@@ -31,48 +33,45 @@ cabal_init_executable(){
     --source-dir=src
 }
 
+# Replace {PACKAGENAME} with the real package name in the given file
+compile_template(){
+  from="${template_root}/$1"
+  to=$2
+  sed "s/{PACKAGENAME}/$packagename/g" "$from" >> "$to"
+}
+
+git_init() {
+  git init --quiet
+  cat >> .gitignore <<GITIGNORE
+.cabal-sandbox/
+cabal.sandbox.config
+dist/
+GITIGNORE
+}
+
+install_and_precompile(){
+  generate_hspec=$1
+
+  cabal update > /dev/null
+
+  if $generate_hspec; then
+    cabal install --enable-tests
+    cabal test > /dev/null
+  else
+    cabal install
+  fi
+  cabal run > /dev/null
+}
+
 add_hspec() {
-  # hspec requires a library, so generate one
   packagename=$1
   cabalfile=$2
 
   mkdir test
 
   echo "{-# OPTIONS_GHC -F -pgmF hspec-discover #-}" > test/Spec.hs
-
-  cat >> "$cabalfile" <<HSPEC
-library
-  build-depends:       base >=4.8 && <4.9
-  hs-source-dirs:      src
-  default-language:    Haskell2010
-  exposed-modules:     $packagename
-
-test-suite test
-  type:              exitcode-stdio-1.0
-  main-is:           Spec.hs
-  hs-source-dirs:    test
-  ghc-options:       -Wall
-  default-language:  Haskell2010
-  build-depends:     base,
-                     hspec,
-                     $packagename
-HSPEC
-
-  cat >> "test/${packagename}Spec.hs" <<SPEC
-module ${packagename}Spec (main, spec) where
-
-import Test.Hspec
-import $packagename
-
-main :: IO ()
-main = hspec spec
-
-spec :: Spec
-spec = do
-    describe "sample" $ do
-        it "works" $
-            True \`shouldBe\` True
-SPEC
+  compile_template hspec "$cabalfile"
+  compile_template PackageSpec.hs "test/${packagename}Spec.hs"
 }
 
 if [[ "$1" == "--hspec" ]];  then
@@ -82,51 +81,25 @@ else
   generate_hspec=false
 fi
 
-projectname=$1
-cabalfile="${projectname}.cabal"
-print "Cool, creating a project named ${fg_bold[yellow]}${projectname}${reset_color}"
+packagename=$1
+cabalfile="${packagename}.cabal"
+print "Cool, creating a project named ${fg_bold[yellow]}${packagename}${reset_color}"
 
-mkdir "$projectname"
-cd "$projectname"
+mkdir "$packagename"
+cd "$packagename"
 
 cabal sandbox init > /dev/null
-cabal_init_executable "$projectname" > /dev/null
+cabal_init_executable "$packagename" > /dev/null
 # Strip whitespace, because cabal doesn't
 sed -i '' 's/ +$//g' *cabal
 
 if $generate_hspec; then
-  add_hspec "$projectname" "$cabalfile"
+  add_hspec "$packagename" "$cabalfile"
 fi
 
-cat > "src/Main.hs" <<MAIN
-module Main where
+compile_template Main.hs "src/Main.hs"
+compile_template Package.hs "src/${packagename}.hs"
+git_init
+install_and_precompile $generate_hspec
 
-  import $projectname
-
-  main = putStrLn "It works!"
-MAIN
-
-cat > "src/$projectname.hs" <<PROJECT
-module $projectname where
-  -- Add code here
-PROJECT
-
-git init --quiet
-cat >> .gitignore <<GITIGNORE
-.cabal-sandbox/
-cabal.sandbox.config
-dist/
-GITIGNORE
-
-# Make sure everything's installed and runs correctly
-cabal update > /dev/null
-
-if $generate_hspec; then
-  cabal install --enable-tests
-  cabal test > /dev/null
-else
-  cabal install
-fi
-cabal run > /dev/null
-
-print "${fg_bold[green]}cd $projectname, edit src/Main.hs, run it with \`cabal run\`${reset_color}"
+print "${fg_bold[green]}cd $packagename, edit src/Main.hs, run it with \`cabal run\`${reset_color}"
