@@ -99,7 +99,11 @@ fi
 
 compile_template Main.hs "src/Main.hs"
 compile_template Package.hs "src/${packagename}.hs"
-git_init
+
+if ! git rev-parse --git-dir &>/dev/null; then
+  git_init
+fi
+
 install_and_precompile $generate_hspec
 
 print "${fg_bold[green]}cd $packagename, edit src/Main.hs, run it with \`cabal run\`${reset_color}"
