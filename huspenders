@@ -63,6 +63,11 @@ install_and_precompile(){
   cabal run > /dev/null
 }
 
+# Expose this package as a library
+add_library_to_cabalfile() {
+  compile_template library-cabalfile "$cabalfile"
+}
+
 add_hspec() {
   packagename=$1
   cabalfile=$2
@@ -70,6 +75,7 @@ add_hspec() {
   mkdir test
 
   echo "{-# OPTIONS_GHC -F -pgmF hspec-discover #-}" > test/Spec.hs
+  add_library_to_cabalfile
   compile_template hspec "$cabalfile"
   compile_template PackageSpec.hs "test/${packagename}Spec.hs"
 }
