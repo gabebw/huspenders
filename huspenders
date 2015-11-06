@@ -48,7 +48,7 @@ cabal.sandbox.config
 dist/
 GITIGNORE
 
-  git commit --allow-empty --message "Initial Commit"
+  git commit --all --message "Initial Commit"
 }
 
 install_and_precompile(){
