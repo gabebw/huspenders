@@ -99,8 +99,37 @@ cabal_init_executable "$packagename" > /dev/null
 # Strip whitespace, because cabal doesn't
 sed -i '' 's/ +$//g' *cabal
 
+bin_setup=bin/setup
+
+mkdir -p bin/
+cat >> "$bin_setup" <<BIN_SETUP
+#!/bin/sh
+
+cabal sandbox init
+BIN_SETUP
+
+cat >> README.md <<README
+# ${packagename}
+
+To install dependencies:
+
+    bin/setup
+README
+
+
+chmod +x "$bin_setup"
+
 if $generate_hspec; then
   add_hspec "$packagename" "$cabalfile"
+  echo "cabal install --enable-tests" >> "$bin_setup"
+  cat >> README.md <<README
+
+To run the tests:
+
+    cabal test
+README
+else
+  echo "cabal install" >> "$bin_setup"
 fi
 
 compile_template Main.hs "src/Main.hs"
