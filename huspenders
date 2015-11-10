@@ -89,7 +89,13 @@ fi
 
 packagename=$1
 cabalfile="${packagename}.cabal"
-print "Cool, creating a project named ${fg_bold[yellow]}${packagename}${reset_color}"
+bin_setup=bin/setup
+
+if $generate_hspec; then
+  print "Cool, creating a project ${fg_bold[green]}with HSpec${reset_color} named ${fg_bold[green]}${packagename}${reset_color}"
+else
+  print "Cool, creating a project named ${fg_bold[green]}${packagename}${reset_color}"
+fi
 
 mkdir "$packagename"
 cd "$packagename"
@@ -97,9 +103,7 @@ cd "$packagename"
 cabal sandbox init > /dev/null
 cabal_init_executable "$packagename" > /dev/null
 # Strip whitespace, because cabal doesn't
-sed -i '' 's/ +$//g' *cabal
-
-bin_setup=bin/setup
+sed -i '' 's/ +$//g' *.cabal
 
 mkdir -p bin/
 cat >> "$bin_setup" <<BIN_SETUP
@@ -115,7 +119,6 @@ To install dependencies:
 
     bin/setup
 README
-
 
 chmod +x "$bin_setup"
 
